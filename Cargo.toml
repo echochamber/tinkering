@@ -1,0 +1,6 @@
+[package]
+name = "echo-edit"
+version = "0.1.0"
+authors = ["Jason Schein <jschein@google.com>"]
+
+[dependencies]
