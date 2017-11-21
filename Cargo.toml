@@ -4,3 +4,9 @@ version = "0.1.0"
 authors = ["Jason Schein <jschein@google.com>"]
 
 [dependencies]
+termion = "1.5.1"
+tokio-core = "0.1.10"
+clap = "2.26.2"
+error-chain = "0.11.0"
+futures = "0.1.16"
+log = "0.3.8"
