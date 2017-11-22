@@ -10,9 +10,57 @@ extern crate error_chain;
 extern crate tokio_core;
 
 use std::io::{Write, Read, BufRead, Cursor, self};
-use termion::raw::IntoRawMode;
+use termion::raw::{RawTerminal, IntoRawMode};
+use termion::event::Key;
+use termion::input::TermRead;
 use std::char::from_u32;
 
+struct Backend {
+    buffer: String
+}
+
+struct Frontend {
+    backend: Backend,
+    stdout: RawTerminal<io::Stdout>
+}
+
+impl Frontend {
+    fn write_frame(&mut self) {
+        write!(self.stdout, "{}{}{}", termion::clear::All, termion::cursor::Goto(1, 1), &self.backend.buffer).unwrap();
+        self.stdout.flush().unwrap();
+    }
+
+    fn run(&mut self) {
+        let mut stdin = io::stdin();
+        for maybe_key in stdin.keys() {
+            match maybe_key {
+                Ok(Key::Char(c)) => {
+                    self.backend.buffer.push(c);
+                    self.write_frame();
+                },
+                Ok(Key::Backspace) => {
+                    self.backend.buffer.pop();
+                    self.write_frame();
+                },
+                Ok(Key::Esc) => {
+                    break;
+                },
+                Ok(_) => {},
+                _ => {},
+            }
+        }
+    }
+}
+
+
+
+fn read_stdin_raw() {
+    let mut frontend = Frontend {
+        backend: Backend { buffer: String::new() },
+        stdout: io::stdout().into_raw_mode().unwrap()
+    };
+    frontend.run();
+}
 
 fn run() -> io::Result<()> {
     let echo_ed = clap_app!(
@@ -28,6 +76,7 @@ fn run() -> io::Result<()> {
 
 fn read_by_char_working() -> io::Result<()> {
     let mut buffer = String::new();
+    let mut stdout = io::stdout().into_raw_mode().unwrap();
 
     let mut continue_reading = true;
     for my_char in io::stdin().chars() {
@@ -35,7 +84,7 @@ fn read_by_char_working() -> io::Result<()> {
         if a_char == 'q' {
             break;
         } else {
-            io::stdout().write(a_char.clone().to_string().into_bytes().as_slice());
+            stdout.write(a_char.clone().to_string().into_bytes().as_slice());
         }
 
     }
@@ -44,14 +93,15 @@ fn read_by_char_working() -> io::Result<()> {
 }
 
 fn iotesting() -> io::Result<()> {
+    let mut stdout = io::stdout().into_raw_mode().unwrap();
 
     for byte in io::stdin().bytes() {
         let item = byte.unwrap();
         if item == b'q' {
             break;
         } else {
-            io::stdout().write(&[item]);
-            io::stdout().flush();
+            stdout.write(&[item]);
+            stdout.flush();
         }
     }
 
@@ -60,6 +110,8 @@ fn iotesting() -> io::Result<()> {
 }
 
 fn main() {
-    iotesting();
+    //iotesting();
     // io::copy(&mut io::stdin(), &mut io::stdout()).unwrap();
+
+    read_stdin_raw();
 }
